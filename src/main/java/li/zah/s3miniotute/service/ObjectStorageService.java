@@ -1,5 +1,6 @@
 package li.zah.s3miniotute.service;
 
+import io.minio.GetObjectArgs;
 import io.minio.GetObjectTagsArgs;
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
@@ -79,6 +80,25 @@ public class ObjectStorageService {
 
     }
     return results.stream().map(Item::objectName).collect(Collectors.toList());
+  }
+
+  public byte[] getObjectsByProjectAndUserAndObjectName(String projectId, String user, String objectName)
+      throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+
+    GetObjectTagsArgs tagArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName)
+        .build();
+
+    Tags tags = minioClient.getObjectTags(tagArgs);
+
+    Map<String, String> tagMap = tags.get();
+    if (!tagMap.containsKey(PROJECT_KEY) && !tagMap.containsKey(USER_KEY) && !projectId.equals(tagMap.get(PROJECT_KEY))
+        && !user.equals(tagMap.get(USER_KEY))) {
+      throw new IllegalArgumentException("No such file for given user/project");
+    }
+
+    GetObjectArgs args = GetObjectArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName).build();
+
+    return minioClient.getObject(args).readAllBytes();
   }
 
 }

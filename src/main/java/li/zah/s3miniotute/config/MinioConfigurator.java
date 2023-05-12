@@ -17,6 +17,8 @@ public class MinioConfigurator {
   @Value("${minio.key.secret}")
   private String secretKey;
 
+  public static String defaultBucket;
+
   private MinioClient minioClient;
 
   @Bean
@@ -25,6 +27,11 @@ public class MinioConfigurator {
       minioClient = MinioClient.builder().endpoint(endpoint).credentials(accessKey, secretKey).build();
     }
     return minioClient;
+  }
+
+  @Value("${minio.bucket}")
+  public void setDefaultBucket(String name) {
+    MinioConfigurator.defaultBucket = name;
   }
 
 }

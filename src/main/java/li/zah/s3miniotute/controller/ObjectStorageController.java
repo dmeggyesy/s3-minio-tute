@@ -2,6 +2,7 @@ package li.zah.s3miniotute.controller;
 
 import static li.zah.s3miniotute.config.ApiEndpoints.ALL_PROJECTS;
 import static li.zah.s3miniotute.config.ApiEndpoints.LIST_ALL_BUCKETS;
+import static li.zah.s3miniotute.config.ApiEndpoints.OBJECT;
 import static li.zah.s3miniotute.config.ApiEndpoints.PROJECT;
 
 import io.minio.errors.ErrorResponseException;
@@ -19,7 +20,9 @@ import li.zah.s3miniotute.service.ObjectStorageService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @Slf4j
 @RestController
@@ -61,6 +65,28 @@ public class ObjectStorageController {
     log.info("List objects by project and user {} - {}", projectId, auth.getName());
 
     return objectStorageService.listAllObjectsByProjectAndUser(projectId, auth.getName());
+  }
+
+  @RequestMapping(value = { OBJECT }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<StreamingResponseBody> getProjectObject(@PathVariable String projectId,
+      @PathVariable String objectName) {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+    log.info("Get objects by project, user and name {} - {} - {}", projectId, auth.getName(), objectName);
+
+    StreamingResponseBody responseBody = outputStream -> {
+      try {
+        outputStream.write(
+            objectStorageService.getObjectsByProjectAndUserAndObjectName(projectId, auth.getName(), objectName));
+      } catch (ServerException | InvalidKeyException | NoSuchAlgorithmException | InsufficientDataException |
+               ErrorResponseException | InvalidResponseException | XmlParserException | InternalException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + objectName)
+        .contentType(MediaType.APPLICATION_OCTET_STREAM).body(responseBody);
+
   }
 
 }

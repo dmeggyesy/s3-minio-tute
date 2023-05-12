@@ -10,4 +10,8 @@ public class ApiEndpoints {
 
   public final static String PROJECT = ALL_PROJECTS + "/{projectId}";
 
+  public final static String ALL_OBJECTS = PROJECT + "/object";
+
+  public final static String OBJECT = ALL_OBJECTS + "/{objectName}";
+
 }

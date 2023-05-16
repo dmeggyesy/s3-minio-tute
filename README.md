@@ -14,5 +14,8 @@ In `application.proprties`
 minio.endpoint=http://localhost:9000
 minio.key.access=<accesskey>
 minio.key.secret=<secretkey>
+
+spring.data.mongodb.uri=mongodb://localhost/<collection>
+spring.data.mongodb.auto-index-creation=true
 ```
 

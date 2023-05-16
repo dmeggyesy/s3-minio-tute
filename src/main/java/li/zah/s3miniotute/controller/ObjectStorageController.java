@@ -1,8 +1,10 @@
 package li.zah.s3miniotute.controller;
 
+import static li.zah.s3miniotute.config.ApiEndpoints.ALL_LINKS;
 import static li.zah.s3miniotute.config.ApiEndpoints.ALL_PROJECTS;
 import static li.zah.s3miniotute.config.ApiEndpoints.LIST_ALL_BUCKETS;
 import static li.zah.s3miniotute.config.ApiEndpoints.OBJECT;
+import static li.zah.s3miniotute.config.ApiEndpoints.OBJECT_LINK;
 import static li.zah.s3miniotute.config.ApiEndpoints.PROJECT;
 
 import io.minio.errors.ErrorResponseException;
@@ -16,6 +18,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import li.zah.s3miniotute.domain.GeneratedLink;
 import li.zah.s3miniotute.service.ObjectStorageService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +89,27 @@ public class ObjectStorageController {
 
     return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + objectName)
         .contentType(MediaType.APPLICATION_OCTET_STREAM).body(responseBody);
+
+  }
+
+  @RequestMapping(value = { OBJECT_LINK }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public GeneratedLink getProjectObjectLink(@PathVariable String projectId, @PathVariable String objectName)
+      throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+    log.info("Get object magic link by project, user and name {} - {} - {}", projectId, auth.getName(), objectName);
+
+    return objectStorageService.getPreSignedUrlByProjectAndUserAndObjectName(projectId, auth.getName(), objectName);
+
+  }
+
+  @RequestMapping(value = { ALL_LINKS }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+  public List<GeneratedLink> getAllProjectObjectLinks(@PathVariable String projectId) {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+    log.info("Get  all object magic link by project, user and name {} - {} ", projectId, auth.getName());
+
+    return objectStorageService.getAllCurrentPresignedLinks(projectId);
 
   }
 

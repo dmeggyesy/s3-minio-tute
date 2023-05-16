@@ -14,4 +14,8 @@ public class ApiEndpoints {
 
   public final static String OBJECT = ALL_OBJECTS + "/{objectName}";
 
+  public final static String ALL_LINKS = PROJECT + "/links";
+
+  public final static String OBJECT_LINK = OBJECT + "/link";
+
 }

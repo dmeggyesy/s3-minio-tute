@@ -1,9 +1,11 @@
 package li.zah.s3miniotute.service;
 
+import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.GetObjectTagsArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.ListObjectsArgs;
+import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.Result;
 import io.minio.errors.ErrorResponseException;
@@ -16,6 +18,7 @@ import io.minio.http.Method;
 import io.minio.messages.Bucket;
 import io.minio.messages.Item;
 import io.minio.messages.Tags;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.net.URL;
 import java.security.InvalidKeyException;
@@ -31,8 +34,10 @@ import li.zah.s3miniotute.dao.GeneratedLinkRepository;
 import li.zah.s3miniotute.domain.GeneratedLink;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ObjectStorageService {
@@ -47,6 +52,17 @@ public class ObjectStorageService {
   @NonNull
   private GeneratedLinkRepository generatedLinkRepository;
 
+  @PostConstruct
+  public void init()
+      throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+
+    if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(MinioConfigurator.defaultBucket).build())) {
+      log.warn("Object Storage bucket does not exist - creating bucket {}", MinioConfigurator.defaultBucket);
+      minioClient.makeBucket(MakeBucketArgs.builder().bucket(MinioConfigurator.defaultBucket).build());
+    }
+
+  }
+
   public List<String> listBuckets()
       throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
@@ -59,18 +75,17 @@ public class ObjectStorageService {
 
   public List<String> listAllObjectsByTag()
       throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
-    System.out.println(MinioConfigurator.defaultBucket);
+
+    List<String> res = new ArrayList<>();
+
     ListObjectsArgs args = ListObjectsArgs.builder().bucket(MinioConfigurator.defaultBucket).build();
     for (Result<Item> item : minioClient.listObjects(args)) {
-
-      System.out.println(item.get().objectName());
-
+      res.add(item.get().objectName());
     }
-    return null;
+    return res;
   }
 
-  public List<String> listAllObjectsByProjectAndUser(String projectId, String user)
-      throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+  public List<String> listAllObjectsByProjectAndUser(String projectId, String user) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
     List<Item> results = new ArrayList<>();
 
@@ -79,8 +94,7 @@ public class ObjectStorageService {
 
       Item item = res.get();
 
-      GetObjectTagsArgs objArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket)
-          .object(item.objectName()).build();
+      GetObjectTagsArgs objArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(item.objectName()).build();
       Tags tags = minioClient.getObjectTags(objArgs);
       Map<String, String> tagMap = tags.get();
       if (tagMap.containsKey(PROJECT_KEY) && tagMap.containsKey(USER_KEY) && projectId.equals(tagMap.get(PROJECT_KEY))
@@ -92,11 +106,9 @@ public class ObjectStorageService {
     return results.stream().map(Item::objectName).collect(Collectors.toList());
   }
 
-  public byte[] getObjectsByProjectAndUserAndObjectName(String projectId, String user, String objectName)
-      throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
+  public byte[] getObjectsByProjectAndUserAndObjectName(String projectId, String user, String objectName) throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
-    GetObjectTagsArgs tagArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName)
-        .build();
+    GetObjectTagsArgs tagArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName).build();
 
     Tags tags = minioClient.getObjectTags(tagArgs);
 
@@ -114,8 +126,7 @@ public class ObjectStorageService {
   public GeneratedLink getPreSignedUrlByProjectAndUserAndObjectName(String projectId, String user, String objectName)
       throws ServerException, InsufficientDataException, ErrorResponseException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidResponseException, XmlParserException, InternalException {
 
-    GetObjectTagsArgs tagArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName)
-        .build();
+    GetObjectTagsArgs tagArgs = GetObjectTagsArgs.builder().bucket(MinioConfigurator.defaultBucket).object(objectName).build();
 
     Tags tags = minioClient.getObjectTags(tagArgs);
 
@@ -135,8 +146,7 @@ public class ObjectStorageService {
     link.setTtl(expiry);
 
     String linkString = minioClient.getPresignedObjectUrl(
-        GetPresignedObjectUrlArgs.builder().method(Method.GET).bucket(MinioConfigurator.defaultBucket)
-            .object(objectName).expiry(expiry, TimeUnit.SECONDS).build());
+        GetPresignedObjectUrlArgs.builder().method(Method.GET).bucket(MinioConfigurator.defaultBucket).object(objectName).expiry(expiry, TimeUnit.SECONDS).build());
 
     link.setLink(new URL(linkString));
 

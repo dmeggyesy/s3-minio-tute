@@ -1,5 +1,7 @@
 package li.zah.s3miniotute;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
 import io.minio.errors.InternalException;
@@ -48,11 +50,11 @@ public class ObjectStorageServiceIT {
     link2.setExpiry(expiry.plusSeconds(250));
     generatedLinkRepository.save(link2);
 
-    System.out.println(generatedLinkRepository.count());
+    assertEquals(generatedLinkRepository.count(), 2);
 
     Thread.sleep(61000);
 
-    System.out.println(generatedLinkRepository.count());
+    assertEquals(generatedLinkRepository.count(), 1);
 
   }
 
